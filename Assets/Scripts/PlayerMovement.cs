@@ -9,6 +9,9 @@ public class PlayerMovement : MonoBehaviour
     //Create a animator and rigidbody class.
     Rigidbody m_Rigidbody;
     Animator m_Animator;
+
+    //The audio source
+    AudioSource m_AudioSource;
     
     //The movement vector
     Vector3 m_Movement;
@@ -23,6 +26,9 @@ public class PlayerMovement : MonoBehaviour
         //Adds the animator and rigidbody components to the script.
         m_Animator = GetComponent<Animator>();
         m_Rigidbody = GetComponent<Rigidbody>();
+
+        //Assign audio references
+        m_AudioSource = GetComponent<AudioSource>();
     }
 
     // FixedUpdate is called once per frame
@@ -42,6 +48,19 @@ public class PlayerMovement : MonoBehaviour
         bool hasVerticalInput = !Mathf.Approximately(vertical, 0f);
         bool isWalking = hasHorizontalInput || hasVerticalInput;
         m_Animator.SetBool("IsWalking", isWalking);
+
+        //Determine if audio will play
+        if(isWalking)
+        {
+            if (!m_AudioSource.isPlaying)
+            {
+                m_AudioSource.Play();
+            }
+        }
+        else
+        {
+            m_AudioSource.Stop();
+        }
 
         //A vector for rotation.
         Vector3 desiredForward = Vector3.RotateTowards(transform.forward, m_Movement, turnSpeed * Time.deltaTime, 0f);

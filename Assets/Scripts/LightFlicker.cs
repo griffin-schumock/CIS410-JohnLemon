@@ -1,23 +1,26 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-#if UNITY_EDITOR
+//#if UNITY_EDITOR
 using UnityEditor;
-#endif
+//#endif
 
 public class LightFlicker : MonoBehaviour
 {
     public enum FlickerMode
     {
         Random,
-        AnimationCurve
+        AnimationCurve,
+        LERP
     }
-    
+
+    [SerializeField] private GameObject JohnLemon;
+
     public Light flickeringLight;
     public Renderer flickeringRenderer;
     public FlickerMode flickerMode;
-    public float lightIntensityMin = 1.25f;
-    public float lightIntensityMax = 2.25f;
+    public float lightIntensityMin = 0f;
+    public float lightIntensityMax = 100f;
     public float flickerDuration = 0.075f;
     public AnimationCurve intensityCurve;
 
@@ -31,6 +34,9 @@ public class LightFlicker : MonoBehaviour
     const string k_EmissiveColorName = "_EmissionColor";
     const string k_EmissionName = "_Emission";
     const float k_LightIntensityToEmission = 2f / 3f;
+
+    float minDist = 0f;
+    float maxDist = 20f;
 
     void Start()
     {
@@ -54,15 +60,28 @@ public class LightFlicker : MonoBehaviour
         {
             ChangeAnimatedFlickerLightIntensity ();
         }
+        else if(flickerMode == FlickerMode.LERP)
+        {
+            ChangeLERPFlickerLightIntensity();
+        }
             
         flickeringLight.intensity = m_FlickerLightIntensity;
         m_FlickeringMaterial.SetColor (k_EmissionColorID, m_EmissionColor * m_FlickerLightIntensity * k_LightIntensityToEmission);
     }
 
+    void ChangeLERPFlickerLightIntensity()
+    {
+        float dist = DistToPlayer()/20;
+        //lerp function: a = lightIntensity max, b = lightIntensityMin, f = distance to player
+        m_FlickerLightIntensity = (1 - dist) * lightIntensityMin + dist * lightIntensityMax;
+        //Debug.Log(m_FlickerLightIntensity);
+        //(1-f) * a + f * b
+    }
+
     void ChangeRandomFlickerLightIntensity ()
     {
-        m_FlickerLightIntensity = Random.Range(lightIntensityMin, lightIntensityMax);
 
+        m_FlickerLightIntensity = Random.Range(lightIntensityMin, lightIntensityMax);
         m_Timer = 0f;
     }
 
@@ -72,6 +91,11 @@ public class LightFlicker : MonoBehaviour
 
         if (m_Timer >= intensityCurve[intensityCurve.length - 1].time)
             m_Timer = intensityCurve[0].time;
+    }
+
+    float DistToPlayer()
+    {
+        return Mathf.Clamp(Vector3.Distance(JohnLemon.transform.position, transform.position), minDist, maxDist);
     }
 }
 
@@ -87,6 +111,8 @@ public class LightFlickerEditor : Editor
     SerializedProperty m_LightIntensityMaxProp;
     SerializedProperty m_FlickerDurationProp;
     SerializedProperty m_IntensityCurveProp;
+    SerializedProperty JohnLemon;
+
 
     void OnEnable ()
     {
@@ -98,6 +124,7 @@ public class LightFlickerEditor : Editor
         m_LightIntensityMaxProp = serializedObject.FindProperty ("lightIntensityMax");
         m_FlickerDurationProp = serializedObject.FindProperty ("flickerDuration");
         m_IntensityCurveProp = serializedObject.FindProperty ("intensityCurve");
+        JohnLemon = serializedObject.FindProperty("JohnLemon");
     }
 
     public override void OnInspectorGUI ()
@@ -122,6 +149,12 @@ public class LightFlickerEditor : Editor
         else if (m_FlickerModeProp.enumValueIndex == 1)
         {
             EditorGUILayout.PropertyField (m_IntensityCurveProp);
+        }
+        else if (m_FlickerModeProp.enumValueIndex == 2)
+        {
+            EditorGUILayout.PropertyField(JohnLemon);
+            EditorGUILayout.PropertyField(m_LightIntensityMinProp);
+            EditorGUILayout.PropertyField(m_LightIntensityMaxProp);
         }
 
         serializedObject.ApplyModifiedProperties ();
